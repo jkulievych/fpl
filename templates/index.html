@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FPL Hype Tracker</title>
+</head>
+<body>
+    <h1>Top Hyped Players This Week</h1>
+    <table border="1">
+        <tr>
+            <th>Name</th>
+            <th>Cost</th>
+            <th>Transfers In</th>
+            <th>Ownership %</th>
+        </tr>
+        {% for player in players %}
+        <tr>
+            <td>{{ player.first_name }} {{ player.second_name }}</td>
+            <td>£{{ player.now_cost }}m</td>
+            <td>{{ player.transfers_in_event }}</td>
+            <td>{{ player.selected_by_percent }}%</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
