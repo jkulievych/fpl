@@ -1,63 +1,152 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>FPL Hype Tracker</title>
+    <title>FPL Hype Tracker | Advanced Analytics</title>
     <style>
-        body { font-family: sans-serif; margin: 40px; line-height: 1.6; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #f4f4f4; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 40px; line-height: 1.6; background-color: #f8f9fa; }
+        h1, h2 { color: #333; }
 
-        /* Підсвітка хайпових гравців (топ-квантиль) */
-        .hyped { background-color: #fff9c4; font-weight: bold; }
+        /* Summary Cards Style */
+        .stats-container { display: flex; gap: 20px; margin-bottom: 30px; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); flex: 1; text-align: center; }
+        .card h3 { margin: 0; color: #666; font-size: 0.9em; text-transform: uppercase; }
+        .card p { font-size: 1.6em; font-weight: bold; margin: 10px 0 0; color: #007bff; }
 
-        /* Стилі для настрою медіа */
-        .news-item { margin-bottom: 10px; padding: 8px; border-left: 5px solid #ccc; }
+        /* Search Form */
+        .search-container { margin-bottom: 30px; }
+        input[type="text"] { padding: 12px; width: 350px; border-radius: 5px; border: 1px solid #ddd; font-size: 1em; }
+        button { padding: 12px 25px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #0056b3; }
+        .reset-link { margin-left: 15px; text-decoration: none; color: #888; font-size: 0.9em; }
+
+        /* Table Style */
+        table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius: 10px; overflow: hidden; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background-color: #f4f4f4; color: #444; font-weight: 600; }
+
+        /* Highlighting Rows */
+        .hyped-row { background-color: #fff9c4 !important; font-weight: 500; } /* Yellow for high Hype (Z-score) */
+        .value-row { background-color: #e8f5e9 !important; } /* Green for high Efficiency (ROI) */
+
+        /* Media Pulse Styles */
+        .news-item { margin-bottom: 12px; padding: 12px; border-left: 5px solid #ccc; background: white; border-radius: 0 5px 5px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .positive { border-left-color: #4caf50; }
         .negative { border-left-color: #f44336; }
-        .sentiment-score { font-size: 0.8em; color: #666; margin-left: 10px; }
+        .highlight-news { border-left-color: #007bff; background-color: #f0f7ff; }
+        .player-tag { background-color: #e3f2fd; color: #0d47a1; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; font-weight: bold; margin-right: 10px; }
+        .sentiment-score { font-size: 0.85em; color: #999; margin-left: 10px; font-style: italic; }
+
+        .chart-container { text-align: center; margin: 40px 0; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+
+        tbody tr:hover {
+        background-color: #f1f8ff !important;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    /* Стиль посилання-імені */
+    .player-link {
+        text-decoration: none;
+        color: #007bff;
+        display: block;
+    }
+    .player-link:hover {
+        text-decoration: underline;
+    }
     </style>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
 
-    <h1>🚀 Top Hyped Players This Week</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Cost</th>
-                <th>Transfers In</th>
-                <th>Ownership %</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for player in players %}
-            <tr class="{% if player.transfers_in > 50000 %}hyped{% endif %}">
-                <td>{{ player.first_name }} {{ player.second_name }}</td>
-                <td>£{{ player.now_cost }}m</td>
-                <td>{{ "{:,}".format(player.transfers_in) }}</td>
-                <td>{{ player.selected_by_percent }}%</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <h1>🚀 FPL Hype vs Reality Tracker</h1>
 
-    <div style="text-align: center; margin-top: 20px;">
-    <h2>📈 Hype Analytics Chart</h2>
-    <img src="{{ url_for('static', filename='hype_chart.png') }}" alt="Hype Chart" style="max-width: 80%; border: 1px solid #ddd;">
+    <div class="stats-container">
+        <div class="card">
+            <h3>Avg Transfers</h3>
+            <p>{{ avg }}</p>
+        </div>
+        <div class="card">
+            <h3>Hype Threshold (Quantile 0.95)</h3>
+            <p>{{ limit }}</p>
+        </div>
+        <div class="card">
+            <h3>Players Analyzed</h3>
+            <p>{{ players|length }}</p>
+        </div>
     </div>
+
+    <div class="search-container">
+        <form action="/" method="get">
+            <input type="text" name="q" value="{{ query or '' }}" placeholder="Search by player name...">
+            <button type="submit">Analyze Hype</button>
+            {% if query %}
+                <a href="/" class="reset-link">Clear Search</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <table>
+    <thead>
+        <tr>
+            <th>Player Name</th>
+            <th>Price</th>
+            <th>Transfers In</th>
+            <th>Z-Score (Hype)</th>
+            <th>ROI (Eff.)</th>
+            <th>Goals</th>
+            <th>Assists</th>
+            <th>Pts</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for player in players %}
+        <tr class="{% if player.z_score > 2 %}hyped-row{% elif player.roi > 5 %}value-row{% endif %}"
+            onclick="window.location.href='/?q={{ player.second_name }}'">
+            <td>
+                <a href="/?q={{ player.second_name }}" class="player-link">
+                    <strong>{{ player.first_name }} {{ player.second_name }}</strong>
+                </a>
+            </td>
+            <td>£{{ player.now_cost }}m</td>
+            <td>{{ "{:,}".format(player.transfers_in) }}</td>
+            <td>{{ player.z_score }}</td>
+            <td><strong>{{ player.roi }}</strong></td>
+            <td>{{ player.goals }}</td>
+            <td>{{ player.assists }}</td>
+            <td>{{ player.total_points }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+    <div class="chart-container">
+    <h2>📈 Interactive Hype Analysis</h2>
+    <div id="hype-chart" style="width:100%; height:500px;"></div>
+    <script>
+        var graphs = {{ plot | safe }};
+        Plotly.newPlot('hype-chart', graphs.data, graphs.layout);
+    </script>
+    <p style="font-size: 0.8em; color: #888;">* Hover over points to see player details. Size represents ownership %.</p>
+</div>
 
     <hr>
 
     <h2>📊 Media Pulse (Scraped & Analyzed)</h2>
     <div>
-        {% for item in news %}
-        <div class="news-item {% if item.sentiment > 0.1 %}positive{% elif item.sentiment < -0.1 %}negative{% endif %}">
-            <span>{{ item.mood }} {{ item.text }}</span>
-            <span class="sentiment-score">Score: {{ item.sentiment }}</span>
-        </div>
-        {% endfor %}
+        {% if not news %}
+            <p>No news items found.</p>
+        {% else %}
+            {% for item in news %}
+            <div class="news-item {% if item.player_tag %}highlight-news{% endif %} {% if item.sentiment > 0.1 %}positive{% elif item.sentiment < -0.1 %}negative{% endif %}">
+                {% if item.player_tag %}
+                    <span class="player-tag">📌 {{ item.player_tag }}</span>
+                {% endif %}
+                <span>{{ item.mood }} {{ item.text }}</span>
+                <span class="sentiment-score">Sentiment: {{ item.sentiment }}</span>
+            </div>
+            {% endfor %}
+        {% endif %}
     </div>
 
 </body>
