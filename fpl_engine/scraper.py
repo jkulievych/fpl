@@ -3,41 +3,80 @@ from bs4 import BeautifulSoup
 
 
 def get_football_news():
-    """Збирає останні футбольні новини з BBC Sport"""
-    # Додаємо User-Agent, щоб сайт думав, що ми звичайний браузер, а не бот
+    """
+    Fetches Premier League news from RSS feeds.
+    Tries multiple sources in order — falls back to next if one fails.
+    """
     headers = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
-    url = 'https://www.bbc.com/sport/football'
+
+    # RSS feeds — more reliable than scraping HTML pages
+    sources = [
+        'https://www.skysports.com/premier-league',  # Sky Sports Football (PL focused)
+        'https://feeds.bbci.co.uk/sport/football/premier-league/rss.xml',  # BBC Sport PL
+        'https://www.theguardian.com/football/premierleague/rss',  # Guardian PL
+    ]
+
     news_list = []
 
-    try:
-        response = requests.get(url, headers=headers, timeout=5)
-        soup = BeautifulSoup(response.text, 'html.parser')
+    for feed_url in sources:
+        try:
+            response = requests.get(feed_url, headers=headers, timeout=8)
+            response.encoding = 'utf-8'
+            soup = BeautifulSoup(response.text, 'xml')
 
-        # Сайти часто міняють дизайн, тому шукаємо відразу кілька типів заголовків
-        headlines = soup.find_all(['h2', 'h3'])
+            items = soup.find_all('item')
+            if not items:
+                # Try html.parser as fallback for non-standard feeds
+                soup = BeautifulSoup(response.text, 'html.parser')
+                items = soup.find_all('item')
 
-        for h in headlines:
-            text = h.get_text(strip=True)
-            # Фільтруємо сміття: беремо лише нормальні речення, яких ще немає в списку
-            if len(text) > 25 and text not in news_list:
-                news_list.append(text)
+            for item in items:
+                title = item.find('title')
+                link  = item.find('link')
 
-        # Якщо з якихось причин сайт нічого не віддав, даємо запасний варіант
-        if not news_list:
-            return [
-                "Premier League updates: Teams prepare for the next crucial matches.",
-                "Manager praises squad performance after intense training session.",
-                "Injury concerns grow for key players ahead of the weekend."
-            ]
+                if not title or not link:
+                    continue
 
-        return news_list[:10]  # Повертаємо топ-10 найсвіжіших новин
+                text = title.get_text(strip=True)
+                url  = link.get_text(strip=True)
 
-    except Exception as e:
-        print(f"Помилка скрапінгу: {e}")
-        # Якщо немає інтернету або сайт впав, стрічка новин все одно не буде порожньою
-        return [
-            "FPL Market shifts: Managers are making early transfers.",
-            "Weather conditions might affect upcoming Premier League fixtures."
-        ]
+                # Skip very short titles (navigation items, etc.)
+                if len(text) < 20:
+                    continue
+
+                if {'text': text, 'url': url} not in news_list:
+                    news_list.append({'text': text, 'url': url})
+
+            if news_list:
+                print(f"Scraper: got {len(news_list)} articles from {feed_url}")
+                break  # stop if we got results
+
+        except Exception as e:
+            print(f"Scraper failed for {feed_url}: {e}")
+            continue
+
+    if not news_list:
+        print("Scraper: all sources failed, using fallback")
+        return _fallback_news()
+
+    return news_list[:16]
+
+
+def _fallback_news():
+    """Static fallback news when all scrapers fail."""
+    return [
+        {
+            'text': 'FPL managers making early moves ahead of next gameweek deadline.',
+            'url': 'https://fantasy.premierleague.com'
+        },
+        {
+            'text': 'Price changes expected as transfer activity increases this week.',
+            'url': 'https://fantasy.premierleague.com'
+        },
+        {
+            'text': 'Fixture difficulty ratings updated for upcoming Premier League rounds.',
+            'url': 'https://fantasy.premierleague.com'
+        },
+    ]

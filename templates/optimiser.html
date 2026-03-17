@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Team Optimiser | FPL Hype Tracker</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;800&family=Barlow+Condensed:wght@700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Barlow', sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; padding: 30px 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+
+        .back-btn { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; text-decoration: none; color: #58a6ff; font-size: 14px; font-weight: 600; transition: opacity 0.2s; }
+        .back-btn:hover { opacity: 0.7; }
+
+        .page-header { margin-bottom: 28px; }
+        .page-header h1 { font-family: 'Barlow Condensed', sans-serif; font-size: 2.2rem; font-weight: 700; color: #e6edf3; }
+        .page-header p { color: #8b949e; font-size: 14px; margin-top: 4px; }
+
+        /* ── FORM CARD ── */
+        .form-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 28px;
+        }
+        .form-card h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: #8b949e; font-weight: 600; margin-bottom: 20px; }
+
+        .form-row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-group label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: #8b949e; font-weight: 600; }
+
+        .metric-btns { display: flex; gap: 8px; }
+        .metric-btn {
+            padding: 9px 18px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid #30363d;
+            background: #0d1117;
+            color: #8b949e;
+            font-family: 'Barlow', sans-serif;
+            transition: all 0.2s;
+        }
+        .metric-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+        .metric-btn.active { background: #1f6feb; color: white; border-color: #1f6feb; }
+
+        .budget-input {
+            padding: 9px 14px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            color: #e6edf3;
+            font-family: 'Barlow', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            width: 120px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .budget-input:focus { border-color: #58a6ff; }
+
+        .run-btn {
+            padding: 10px 28px;
+            background: #1f6feb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: 0.03em;
+            transition: background 0.2s;
+        }
+        .run-btn:hover { background: #388bfd; }
+
+        /* ── SUMMARY STRIP ── */
+        .summary-strip {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .summary-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-top: 3px solid #1f6feb;
+            border-radius: 12px;
+            padding: 16px 18px;
+            text-align: center;
+        }
+        .summary-card span { display: block; color: #8b949e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+        .summary-card strong { font-size: 1.5em; font-weight: 800; color: #e6edf3; }
+
+        /* ── POSITION SECTIONS ── */
+        .position-section { margin-bottom: 24px; }
+        .position-label {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: #58a6ff;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .player-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            text-decoration: none;
+            color: inherit;
+            transition: border-color 0.2s;
+        }
+        .player-row:hover { border-color: #58a6ff; }
+
+        .player-photo-sm {
+            width: 44px;
+            height: 56px;
+            border-radius: 6px;
+            object-fit: cover;
+            background: #21262d;
+            flex-shrink: 0;
+        }
+        .player-name { font-weight: 600; font-size: 15px; color: #e6edf3; flex: 1; }
+        .player-meta { display: flex; gap: 10px; align-items: center; }
+
+        .pill {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .pill-cost { background: #21262d; color: #8b949e; }
+        .pill-pts  { background: #1a3a2433; color: #3fb950; }
+        .pill-roi  { background: #0d419d33; color: #58a6ff; }
+
+        /* ── ERROR ── */
+        .error-card {
+            background: #3d1a1a;
+            border: 1px solid #f85149;
+            border-radius: 12px;
+            padding: 18px 22px;
+            color: #f85149;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="/" class="back-btn">← Back to Dashboard</a>
+
+    <div class="page-header">
+        <h1>Team Optimiser</h1>
+        <p>Find the mathematically optimal 15-player squad using linear programming</p>
+    </div>
+
+    <!-- FORM -->
+    <div class="form-card">
+        <h2>Settings</h2>
+        <form method="POST" action="/optimiser">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Optimise for</label>
+                    <div class="metric-btns">
+                        <button type="submit" name="metric" value="total_points"
+                            class="metric-btn {% if metric == 'total_points' %}active{% endif %}">
+                            Total Points
+                        </button>
+                        <button type="submit" name="metric" value="form"
+                            class="metric-btn {% if metric == 'form' %}active{% endif %}">
+                            Form
+                        </button>
+                        <button type="submit" name="metric" value="roi"
+                            class="metric-btn {% if metric == 'roi' %}active{% endif %}">
+                            ROI
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Budget (£m)</label>
+                    <input type="number" name="budget" value="{{ budget }}" min="80" max="120" step="0.5" class="budget-input">
+                </div>
+
+                <button type="submit" name="metric" value="{{ metric }}" class="run-btn">Optimise →</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- RESULTS -->
+    {% if result %}
+        {% if result.error %}
+            <div class="error-card">⚠️ {{ result.error }}</div>
+        {% else %}
+
+        <div class="summary-strip">
+            <div class="summary-card">
+                <span>Total Cost</span>
+                <strong>£{{ result.total_cost }}m</strong>
+            </div>
+            <div class="summary-card">
+                <span>Total Points</span>
+                <strong>{{ result.total_points }}</strong>
+            </div>
+            <div class="summary-card">
+                <span>Remaining Budget</span>
+                <strong>£{{ "%.1f"|format(result.budget - result.total_cost) }}m</strong>
+            </div>
+        </div>
+
+        {% for pos in ['GK', 'DEF', 'MID', 'FWD'] %}
+            {% if result.players[pos] %}
+            <div class="position-section">
+                <div class="position-label">{{ pos }}</div>
+                {% for p in result.players[pos] %}
+                <a href="/player/{{ p.id }}" class="player-row">
+                    <img src="/static/player_photos/{{ p.photo | replace('.jpg', '') }}.png"
+                         class="player-photo-sm"
+                         onerror="this.onerror=null;this.src='/static/player_photos/default.png';">
+                    <span class="player-name">{{ p.name }}</span>
+                    <div class="player-meta">
+                        <span class="pill pill-cost">£{{ p.cost }}m</span>
+                        <span class="pill pill-pts">{{ p.total_points }} pts</span>
+                        <span class="pill pill-roi">ROI {{ p.roi }}</span>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endfor %}
+
+        {% endif %}
+    {% endif %}
+
+</div>
+</body>
+</html>

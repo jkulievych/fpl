@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="referrer" content="no-referrer">
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <title>{{ player.first_name }} {{ player.second_name }} | Player Insights</title>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;800&family=Barlow+Condensed:wght@700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Barlow', sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; }
+        .container { max-width: 900px; margin: 0 auto; padding: 30px 20px; }
+
+        .back-btn { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; text-decoration: none; color: #58a6ff; font-size: 14px; font-weight: 600; letter-spacing: 0.03em; transition: opacity 0.2s; }
+        .back-btn:hover { opacity: 0.7; }
+
+        /* ── HERO CARD ── */
+        .hero-card { background: #161b22; border: 1px solid #30363d; border-radius: 16px; overflow: hidden; margin-bottom: 24px; }
+        .hero-banner { height: 90px; background: linear-gradient(135deg, #0d419d 0%, #1f6feb 50%, #388bfd 100%); position: relative; }
+        .hero-banner::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(255,255,255,0.03) 20px, rgba(255,255,255,0.03) 40px); }
+        .hero-body { padding: 0 28px 28px; display: flex; align-items: flex-end; gap: 24px; }
+        .photo-wrap { margin-top: -50px; flex-shrink: 0; position: relative; z-index: 1; }
+        .player-photo { width: 110px; height: 140px; border-radius: 12px; border: 3px solid #161b22; object-fit: cover; display: block; background: #21262d; }
+        .player-info { padding-top: 16px; flex: 1; }
+        .player-name { font-family: 'Barlow Condensed', sans-serif; font-size: 2rem; font-weight: 700; letter-spacing: 0.02em; color: #e6edf3; line-height: 1.1; margin-bottom: 8px; }
+        .team-row { display: flex; align-items: center; gap: 10px; }
+        .team-badge { width: 28px; height: 28px; }
+
+        /* ── FIXTURE PILL ── */
+        .fixture-pill { font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; letter-spacing: 0.05em; }
+        .fixture-green  { background: #1a3a24; color: #3fb950; }
+        .fixture-yellow { background: #2d2a14; color: #d29922; }
+        .fixture-red    { background: #3d1a1a; color: #f85149; }
+
+        /* ── VERDICT ── */
+        .verdict-card { background: #161b22; border: 1px solid #1f6feb; border-left: 4px solid #1f6feb; border-radius: 12px; padding: 18px 22px; margin-bottom: 24px; }
+        .verdict-card h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: #58a6ff; margin-bottom: 8px; }
+        .verdict-card p { color: #c9d1d9; font-size: 15px; line-height: 1.6; }
+
+        /* ── STATS GRID ── */
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 24px; }
+        .stat-card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 18px; text-align: center; transition: border-color 0.2s; }
+        .stat-card:hover { border-color: #58a6ff; }
+        .stat-card span { display: block; color: #8b949e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+        .stat-card strong { font-size: 1.5em; color: #e6edf3; font-weight: 800; }
+
+        /* ── PRICE CARD ── */
+        .price-card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 20px 22px; margin-top: 24px; }
+        .price-green  { color: #3fb950; border-left: 4px solid #3fb950; }
+        .price-red    { color: #f85149; border-left: 4px solid #f85149; }
+        .price-yellow { color: #d29922; border-left: 4px solid #d29922; }
+        .price-neutral{ color: #8b949e; border-left: 4px solid #30363d; }
+
+        /* ── HISTORY CHART ── */
+        .chart-card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 20px 22px; margin-top: 24px; }
+        .chart-card h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: #8b949e; font-weight: 600; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="/" class="back-btn">← Back to Dashboard</a>
+
+    <div class="hero-card">
+        <div class="hero-banner"></div>
+        <div class="hero-body">
+            <div class="photo-wrap">
+                <img src="/static/player_photos/{{ player.photo | replace('.jpg', '') }}.png"
+                     class="player-photo"
+                     onerror="this.onerror=null;this.src='/static/player_photos/default.png';">
+            </div>
+            <div class="player-info">
+                <div class="player-name">{{ player.first_name }} {{ player.second_name }}</div>
+                <div class="team-row">
+                    <img src="https://resources.premierleague.com/premierleague/badges/t{{ player.team_code }}.png" class="team-badge">
+                    <span class="fixture-pill fixture-{{ fixture_color }}">
+                        {{ fixture_label }} — next 5 avg {{ fixture_avg }}/5
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="verdict-card">
+        <h3>FPL AI Verdict</h3>
+        <p>{{ verdict }}</p>
+    </div>
+
+    <div id="radar-chart"></div>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+        var radarData = {{ radar_plot | safe }};
+        radarData.layout.paper_bgcolor = 'rgba(0,0,0,0)';
+        radarData.layout.plot_bgcolor = 'rgba(0,0,0,0)';
+        radarData.layout.font = { color: '#8b949e' };
+        Plotly.newPlot('radar-chart', radarData.data, radarData.layout);
+    </script>
+
+    <div class="stats-grid">
+        <div class="stat-card"><span>Price</span><strong>£{{ player.now_cost }}m</strong></div>
+        <div class="stat-card"><span>Efficiency (ROI)</span><strong>{{ player.roi }}</strong></div>
+        <div class="stat-card"><span>Market Hype (Z)</span><strong>{{ player.z_score }}</strong></div>
+        <div class="stat-card"><span>Total Points</span><strong>{{ player.total_points }}</strong></div>
+        <div class="stat-card"><span>Goals</span><strong>{{ player.goals }}</strong></div>
+        <div class="stat-card"><span>Assists</span><strong>{{ player.assists }}</strong></div>
+    </div>
+
+    <!-- PRICE CHANGE -->
+    <div class="price-card price-{{ price_change.color }}">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px;">
+            <div>
+                <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:#8b949e; font-weight:600;">Price Change Prediction</span>
+                <p style="margin-top:10px; font-size:13px; color:#8b949e; line-height:1.5;">{{ price_change.detail }}</p>
+            </div>
+            <div style="text-align:right; flex-shrink:0;">
+                <strong style="font-size:1.3em; white-space:nowrap;">{{ price_change.label }}</strong>
+                <p style="font-size:12px; color:#8b949e; margin-top:4px;">{{ price_change.pressure }}% pressure</p>
+            </div>
+        </div>
+        <div style="margin-top:14px; background:#21262d; border-radius:6px; height:5px; overflow:hidden;">
+            <div style="width:{{ price_change.pressure }}%; height:100%; background:currentColor; border-radius:6px; transition: width 0.6s ease;"></div>
+        </div>
+    </div>
+
+    <!-- GAMEWEEK HISTORY CHART -->
+    {% if history_chart %}
+    <div class="chart-card">
+        <h3>Gameweek Points History</h3>
+        <div id="history-chart"></div>
+        <script>
+            var historyData = {{ history_chart | safe }};
+            Plotly.newPlot('history-chart', historyData.data, historyData.layout);
+        </script>
+    </div>
+    {% endif %}
+
+</div>
+</body>
+</html>
