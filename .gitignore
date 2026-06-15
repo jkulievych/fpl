@@ -3,3 +3,7 @@ __pycache__/
 *.pyc
 .idea/
 database.db
+static/player_photos/*
+!static/player_photos/default.png
+.DS_Store
+.env

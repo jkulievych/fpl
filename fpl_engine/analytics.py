@@ -8,6 +8,7 @@ import plotly.utils
 import json
 import plotly.graph_objects as go
 import requests
+import numpy as np
 matplotlib.use('Agg')
 
 
@@ -47,7 +48,8 @@ def calculate_z_score(df):
     mean_val = df['transfers_in'].mean()
     std_val = df['transfers_in'].std()
     if std_val == 0:
-        return 0
+        df['z_score'] = 0.0
+        return df
     df['z_score'] = (df['transfers_in'] - mean_val) / std_val
     return df
 
@@ -313,3 +315,63 @@ def optimise_team(players, metric='total_points', budget=100.0):
         'budget': budget,
         'error': None
     }
+
+def calculate_price_pressure_ci(player_transfers_in, total_players=8000000, n_samples=2000):
+    """
+    Monte Carlo 95% confidence interval for price change pressure.
+
+    The transfers_out figure isn't exposed by the FPL API, so the app
+    estimates it as ~30% of transfers_in. That ratio is uncertain — this
+    treats it as a random variable (Normal, mean=0.30, sd=0.08, clipped
+    to [0.05, 0.60]) and recomputes the pressure percentage for many
+    sampled ratios, returning the 2.5th and 97.5th percentiles.
+    """
+    threshold = total_players * 0.01
+    rng = np.random.default_rng()
+    ratios = np.clip(rng.normal(0.30, 0.08, n_samples), 0.05, 0.60)
+
+    transfers_out = player_transfers_in * ratios
+    net = player_transfers_in - transfers_out
+    pressures = np.minimum(np.abs(net) / threshold * 100, 100)
+
+    return {
+        'ci_low': round(float(np.percentile(pressures, 2.5)), 1),
+        'ci_high': round(float(np.percentile(pressures, 97.5)), 1),
+    }
+
+def calculate_captain_score(form, fixture_avg):
+    """
+    Higher score = stronger captaincy pick.
+    Combines recent form with upcoming fixture ease (1=easy, 5=hard).
+    """
+    fixture_factor = (6 - fixture_avg) / 5
+    return round(form * fixture_factor, 2)
+
+
+def get_team_fixture_map():
+    """
+    Fetches each team's average difficulty for their next 5 fixtures,
+    once for all 20 teams — avoids calling the API per-player.
+    """
+    try:
+        bootstrap = requests.get("https://fantasy.premierleague.com/api/bootstrap-static/").json()
+        fixtures = requests.get("https://fantasy.premierleague.com/api/fixtures/").json()
+        team_code_to_id = {t['code']: t['id'] for t in bootstrap['teams']}
+        fixture_map = {}
+
+        for code, team_id in team_code_to_id.items():
+            upcoming = []
+            for f in fixtures:
+                if f['finished']:
+                    continue
+                if f['team_h'] == team_id:
+                    upcoming.append(f['team_h_difficulty'])
+                elif f['team_a'] == team_id:
+                    upcoming.append(f['team_a_difficulty'])
+                if len(upcoming) == 5:
+                    break
+            fixture_map[code] = round(sum(upcoming) / len(upcoming), 2) if upcoming else 3.0
+
+        return fixture_map
+    except Exception:
+        return {}

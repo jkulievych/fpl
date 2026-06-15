@@ -5,15 +5,16 @@ import plotly
 import plotly.graph_objects as go
 import requests
 from flask import Flask, render_template, request
-from sqlalchemy import or_
-from fpl_engine.models import db, Player
+from sqlalchemy import or_, func
+from fpl_engine.models import db, Player, UsageLog
 from fpl_engine.api_client import get_fpl_data, update_db_from_api
 from fpl_engine.scraper import get_football_news
 from fpl_engine.analytics import (
     get_sentiment, calculate_hype_metrics, create_hype_chart,
     create_interactive_chart, calculate_z_score, calculate_roi,
     get_fixture_difficulty, get_fixture_label, predict_price_change,
-    optimise_team
+    optimise_team, calculate_price_pressure_ci, calculate_captain_score,
+    get_team_fixture_map
 )
 
 app = Flask(__name__)
@@ -130,6 +131,24 @@ def index():
     position = request.args.get('pos', 'all')
 
     all_players = Player.query.all()
+    fixture_map = get_team_fixture_map()
+    captain_candidates = []
+    for p in all_players:
+        if p.element_type in (3, 4):  # MID or FWD only
+            fixture_avg = fixture_map.get(p.team_code, 3.0)
+            score = calculate_captain_score(p.form, fixture_avg)
+            captain_candidates.append({
+                'id': p.id,
+                'name': f"{p.first_name} {p.second_name}",
+                'photo': p.photo,
+                'team_code': p.team_code,
+                'form': p.form,
+                'fixture_avg': fixture_avg,
+                'score': score
+            })
+
+    captain_candidates.sort(key=lambda x: x['score'], reverse=True)
+    top_captains = captain_candidates[:3]
     if not all_players:
         return render_template('index.html', players=[], news=[], avg=0, limit=0, plot=None)
 
@@ -215,7 +234,8 @@ def index():
                            total_db=total_count,
                            query=query,
                            position=position,
-                           deadline=deadline_info)
+                           deadline=deadline_info,
+                           top_captains=top_captains)
 
 
 @app.route('/player/<int:player_id>')
@@ -247,6 +267,8 @@ def player_page(player_id):
 
     estimated_transfers_out = round(player.transfers_in * 0.3)
     price_change = predict_price_change(player.transfers_in, estimated_transfers_out)
+    price_change.update(calculate_price_pressure_ci(player.transfers_in))
+
 
     # GAMEWEEK HISTORY CHART
     history_chart = get_gameweek_history(player_id)
@@ -341,5 +363,40 @@ def optimiser():
                            budget=budget)
 
 
+@app.route('/stats')
+def stats():
+    total_requests = UsageLog.query.count()
+
+    top_paths = db.session.query(
+        UsageLog.path, func.count(UsageLog.id).label('count')
+    ).group_by(UsageLog.path).order_by(func.count(UsageLog.id).desc()).limit(10).all()
+
+    top_searches = db.session.query(
+        UsageLog.query_string, func.count(UsageLog.id).label('count')
+    ).filter(UsageLog.endpoint == 'index', UsageLog.query_string != '') \
+     .group_by(UsageLog.query_string).order_by(func.count(UsageLog.id).desc()).limit(10).all()
+
+    return render_template('stats.html',
+                           total_requests=total_requests,
+                           top_paths=top_paths,
+                           top_searches=top_searches)
+
+@app.after_request
+def log_request(response):
+    if request.path.startswith('/static/'):
+        return response
+    try:
+        log = UsageLog(
+            endpoint=request.endpoint,
+            path=request.path,
+            method=request.method,
+            query_string=request.query_string.decode('utf-8')
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        print(f"Logging error: {e}")
+    return response
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5001)

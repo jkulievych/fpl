@@ -1,9 +1,10 @@
 import requests
 import pandas as pd
 from datetime import datetime, timedelta
-from fpl_engine.models import db, Player
+from fpl_engine.models import db, Player, PlayerSnapshot
+from fpl_engine.analytics import calculate_z_score
 
-CACHE_DURATION = timedelta(hours=1)  # ── how often to refresh
+CACHE_DURATION = timedelta(hours=1)
 
 def _should_refresh():
     """Check if any player was updated more than 1 hour ago."""
@@ -36,7 +37,6 @@ def get_fpl_data():
     return None
 
 def update_db_from_api():
-    # ── NEW: skip if data is fresh ──
     if not _should_refresh():
         print("Cache is fresh, skipping API call.")
         return True
@@ -46,6 +46,9 @@ def update_db_from_api():
     if df is None:
         return False
 
+    df = calculate_z_score(df)
+
+    now = datetime.utcnow()
     for _, row in df.iterrows():
         player = Player.query.get(row['id'])
         if not player:
@@ -64,8 +67,20 @@ def update_db_from_api():
         player.team_code = row['team_code']
         player.form = float(row['form'])
         player.element_type = int(row['element_type'])
-        player.last_updated = datetime.utcnow()  # ── NEW: stamp the time
+        player.last_updated = now
+
+        snapshot = PlayerSnapshot(
+            player_id=int(row['id']),
+            timestamp=now,
+            now_cost=row['now_cost'],
+            transfers_in=int(row['transfers_in']),
+            selected_by_percent=float(row['selected_by_percent']),
+            total_points=int(row['total_points']),
+            form=float(row['form']),
+            z_score=float(row['z_score'])
+        )
+        db.session.add(snapshot)
 
     db.session.commit()
-    print(f"DB updated at {datetime.utcnow()}")
+    print(f"DB updated at {now}, {len(df)} snapshots recorded")
     return True

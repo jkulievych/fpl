@@ -116,9 +116,15 @@
                 <p style="font-size:12px; color:#8b949e; margin-top:4px;">{{ price_change.pressure }}% pressure</p>
             </div>
         </div>
-        <div style="margin-top:14px; background:#21262d; border-radius:6px; height:5px; overflow:hidden;">
-            <div style="width:{{ price_change.pressure }}%; height:100%; background:currentColor; border-radius:6px; transition: width 0.6s ease;"></div>
-        </div>
+        <div style="margin-top:14px; background:#21262d; border-radius:6px; height:5px; overflow:hidden; position:relative;">
+    <!-- 95% CI band -->
+    <div style="position:absolute; left:{{ price_change.ci_low }}%; width:{{ price_change.ci_high - price_change.ci_low }}%; height:100%; background:currentColor; opacity:0.25;"></div>
+    <!-- Point estimate -->
+    <div style="width:{{ price_change.pressure }}%; height:100%; background:currentColor; border-radius:6px; transition: width 0.6s ease; position:relative;"></div>
+</div>
+<p style="font-size:11px; color:#8b949e; margin-top:6px;">
+    95% CI: {{ price_change.ci_low }}% – {{ price_change.ci_high }}% pressure (accounts for uncertainty in the transfers-out estimate)
+</p>
     </div>
 
     <!-- GAMEWEEK HISTORY CHART -->

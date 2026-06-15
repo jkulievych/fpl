@@ -251,19 +251,39 @@
 </div>
 
     <div class="stats-container">
-        <div class="card">
-            <h3>Top Efficiency (ROI)</h3>
-            <p>{{ top_efficiency }}</p>
-        </div>
-        <div class="card">
-            <h3>Market Anomaly</h3>
-            <p>{{ market_anomaly }}</p>
-        </div>
-        <div class="card">
-            <h3>Total Database</h3>
-            <p>{{ total_db }} Players</p>
-        </div>
+    <div class="card">
+        <h3>Top Efficiency (ROI)</h3>
+        <p>{{ top_efficiency }}</p>
     </div>
+    <div class="card">
+        <h3>Market Anomaly</h3>
+        <p>{{ market_anomaly }}</p>
+    </div>
+    <div class="card">
+        <h3>Total Database</h3>
+        <p>{{ total_db }} Players</p>
+    </div>
+</div>
+
+<div style="margin-top: 24px; margin-bottom: 24px;">
+    <h2 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: #8b949e; font-weight: 600; margin-bottom: 12px;">
+        Captain Picks
+    </h2>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+        {% for c in top_captains %}
+        <a href="/player/{{ c.id }}" style="text-decoration: none; color: inherit;">
+            <div style="background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 16px; text-align: center; transition: border-color 0.2s;">
+                <img src="/static/player_photos/{{ c.photo | replace('.jpg', '') }}.png"
+                     style="width: 56px; height: 70px; border-radius: 8px; object-fit: cover; background: #21262d; margin-bottom: 8px;"
+                     onerror="this.onerror=null;this.src='/static/player_photos/default.png';">
+                <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">{{ c.name }}</div>
+                <div style="font-size: 12px; color: #8b949e;">Form {{ c.form }} · Fixtures {{ c.fixture_avg }}/5</div>
+                <div style="font-size: 1.2em; font-weight: 800; color: #58a6ff; margin-top: 4px;">{{ c.score }}</div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
 
     <!-- SEARCH + POSITION FILTER -->
 <div class="search-container">
